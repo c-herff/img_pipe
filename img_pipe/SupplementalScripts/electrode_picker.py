@@ -750,11 +750,10 @@ class electrode_picker:
         '''
         Remove the electrode at the current crosshair point. 
         '''
-        cs = np.round(self.current_slice).astype(np.int)
-        radius = 2
+        cs = np.round(self.current_slice).astype(np.int) 
         if self.bin_mat != '':
             self.bin_mat = ''
-            
+            radius = 2
             # Remove the electrode from elecmatrix
             self.elecmatrix[self.device_name].pop()
 

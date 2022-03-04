@@ -124,19 +124,22 @@ def ctmr_gauss_plot(tri, vert, color=(0.8, 0.8, 0.8), elecs=None, weights=None,
     mesh.actor.property.specular_power = specular_power
     mesh.actor.property.diffuse = diffuse
     mesh.actor.property.interpolation = interpolation
-    #mesh.scene.light_manager.light_mode = 'vtk'
+    mesh.scene.light_manager.light_mode = 'vtk'
     if opacity < 1.0:
         mesh.scene.renderer.set(use_depth_peeling=True) #, maximum_number_of_peels=100, occlusion_ratio=0.0
 
     # Make the mesh look smoother
     for child in mlab.get_engine().scenes[0].children:
         poly_data_normals = child.children[0]
-        poly_data_normals.filter.feature_angle = 80.0 # Feature angle says which angles are considered hard corners
+        try:
+            poly_data_normals.filter.feature_angle = 80.0 # Feature angle says which angles are considered hard corners
+        except:
+            pass
 
     return mesh, mlab
 
 
-def el_add(elecs, color = (1., 0., 0.), msize = 2, numbers = None, label_offset=-1.0, ambient = 0.3261, specular = 1, specular_power = 16, diffuse = 0.6995, interpolation = 'phong', **kwargs):
+def el_add(elecs, color = (1., 0., 0.), msize = 2, numbers = None, label_offset=-1.0, ambient = 0.3261, specular = 1, specular_power = 16, diffuse = 0.6995, interpolation = 'phong'):
     '''This function adds the electrode matrix [elecs] (nchans x 3) to
     the scene.
     
@@ -151,16 +154,8 @@ def el_add(elecs, color = (1., 0., 0.), msize = 2, numbers = None, label_offset=
             size of the electrode.  default = 2
         label_offset : float
             how much to move the number labels out by (so not blocked by electrodes)
-        **kwargs : 
-            any other keyword arguments that can be passed to points3d
     '''
-    
-    # Get the current keyword arguments
-    cur_kwargs = dict(color = color, scale_factor = msize, resolution=25)
 
-    # Allow the user to override the default keyword arguments using kwargs
-    cur_kwargs.update(kwargs)
-    
     # plot the electrodes as spheres
     # If we have one color for each electrode, color them separately
     if type(color) is np.ndarray:
@@ -171,14 +166,13 @@ def el_add(elecs, color = (1., 0., 0.), msize = 2, numbers = None, label_offset=
             unique_colors = np.array(list(set([tuple(row) for row in color])))
             for individual_color in unique_colors:
                 indices = np.where((color==individual_color).all(axis=1))[0]
-                cur_kwargs.update(color=tuple(individual_color))
-                points = mlab.points3d(elecs[indices,0],elecs[indices,1],elecs[indices,2], **cur_kwargs)
+                points = mlab.points3d(elecs[indices,0],elecs[indices,1],elecs[indices,2],scale_factor=msize,color=tuple(individual_color),resolution=25)
         else:
             print('Warning: color array does not match size of electrode matrix')
 
     # Otherwise, use the same color for all electrodes
     else:
-        points = mlab.points3d(elecs[:,0],elecs[:,1], elecs[:,2], **cur_kwargs)
+        points = mlab.points3d(elecs[:,0],elecs[:,1], elecs[:,2], scale_factor = msize, color = color, resolution=25)
 
     # Set display properties
     points.actor.property.ambient = ambient
@@ -186,7 +180,7 @@ def el_add(elecs, color = (1., 0., 0.), msize = 2, numbers = None, label_offset=
     points.actor.property.specular_power = specular_power
     points.actor.property.diffuse = diffuse
     points.actor.property.interpolation = interpolation
-    #points.scene.light_manager.light_mode = 'vtk'
+    points.scene.light_manager.light_mode = 'vtk'
 
     if numbers is not None:
         for ni, n in enumerate(numbers):

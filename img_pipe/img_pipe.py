@@ -428,7 +428,7 @@ class freeCoG:
         else:
             setattr(self, mesh_name+'_surf_file', out_file)
   
-    def reg_img(self, source='CT.nii', target='orig.mgz', smooth=0., reg_type='rigid', interp='pv', xtol=0.0001, ftol=0.0001):
+    def reg_img(self, source='CT.nii', target='orig.mgz', smooth=0., reg_type='rigid', interp='pv', xtol=0.0001, ftol=0.0001, resample=False):
         '''Runs nmi coregistration between two images.
         Usually run as patient.reg_img() 
         You can also specify the source (usually a CT scan, assumed to be in $SUBJECTS_DIR/subj/CT)
@@ -466,9 +466,12 @@ class freeCoG:
         # Compute registration
         ct_to_mri_reg = nipy.algorithms.registration.histogram_registration.HistogramRegistration(ctimg, mriimg, similarity='nmi', smooth=smooth, interp=interp)
         aff = ct_to_mri_reg.optimize(reg_type).as_affine()   
-
-        ct_to_mri = AffineTransform(ct_cmap.function_range, mri_cmap.function_range, aff)  
-        reg_CT = nipy.algorithms.resample.resample(ctimg, mri_cmap, ct_to_mri.inverse(), mriimg.shape)    
+        if resample:
+            ct_to_mri = AffineTransform(ct_cmap.function_range, ct_cmap.function_range, aff) 
+            reg_CT = nipy.algorithms.resample.resample(ctimg, ct_cmap, ct_to_mri.inverse(), ctimg.shape)
+        else:
+            ct_to_mri = AffineTransform(ct_cmap.function_range, mri_cmap.function_range, aff)  
+            reg_CT = nipy.algorithms.resample.resample(ctimg, mri_cmap, ct_to_mri.inverse(), mriimg.shape)    
 
         outfile = os.path.join(self.CT_dir, 'r'+source)
         print("Saving registered CT image as %s"%(outfile))

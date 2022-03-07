@@ -467,11 +467,11 @@ class freeCoG:
         ct_to_mri_reg = nipy.algorithms.registration.histogram_registration.HistogramRegistration(ctimg, mriimg, similarity='nmi', smooth=smooth, interp=interp)
         aff = ct_to_mri_reg.optimize(reg_type).as_affine()   
         if resample:
-            ct_to_mri = AffineTransform(ct_cmap.function_range, ct_cmap.function_range, aff) 
-            reg_CT = nipy.algorithms.resample.resample(ctimg, ct_cmap, ct_to_mri.inverse(), ctimg.shape)
-        else:
             ct_to_mri = AffineTransform(ct_cmap.function_range, mri_cmap.function_range, aff)  
-            reg_CT = nipy.algorithms.resample.resample(ctimg, mri_cmap, ct_to_mri.inverse(), mriimg.shape)    
+            reg_CT = nipy.algorithms.resample.resample(ctimg, mri_cmap, ct_to_mri.inverse(), mriimg.shape)
+        else:
+            ct_to_mri = AffineTransform(ct_cmap.function_range, ct_cmap.function_range, aff) 
+            reg_CT = nipy.algorithms.resample.resample(ctimg, ct_cmap, ct_to_mri.inverse(), ctimg.shape)    
 
         outfile = os.path.join(self.CT_dir, 'r'+source)
         print("Saving registered CT image as %s"%(outfile))
@@ -963,6 +963,78 @@ class freeCoG:
                 completed = raw_input('Finished entering devices? Enter \'y\' if finished.')
                 if completed=='y':
                     done = True 
+            outfile = raw_input('What filename would you like to save out to?\n')
+        elecmatrix_all = np.vstack(elecmatrix_all)
+        eleclabels = np.ones(elecmatrix_all.shape,dtype=np.object)
+        eleclabels[:,0] = short_names
+        eleclabels[:,1] = long_names
+        eleclabels[:,2] = elec_types
+        label_outfile = os.path.join(self.elecs_dir, '%s.mat'%(outfile))
+        scipy.io.savemat(label_outfile,{'eleclabels':eleclabels,'elecmatrix':elecmatrix_all})
+
+    def make_elecs_all_simple_depth(self, input_list=None, outfile=None):
+        '''Interactively creates a .mat file with the montage and coordinates of 
+        all the elecs files in the /elecs_individual folder in a simplified manner for depth electrodes only.        
+        
+        Parameters
+        ----------
+        input_list : list of tuples
+            default is None which leads to the interactive prompts to create the elecs_all file, but you can
+            input your own list of devices as a list of tuples, where each tuple is in the format
+            (short_name, long_name, elec_type, filename). The filename is the elecmatrix .mat file of the 
+            device, and should be in the elecs/individual_elecs folder. If you want to add NaN rows, 
+            enter ('Nan','Nan','Nan',number_of_nan_rows), where in the fourth element you specify how many empty rows
+            you'd like to add. 
+        outfile : str
+            the name of the file you want to save to, specify this if not using the interactive version
+
+        Usage
+        -----
+        >>> patient.make_elecs_all(input_list=[('AD','AmygDepth','depth','amygdala_depth.mat'),('G','Grid','grid','hd_grid.mat'),('nan','nan','nan',5)], outfile='test_elecs_all_list')
+        
+        
+        '''
+        short_names,long_names, elec_types, elecmatrix_all = [],[],[],[]
+
+        #non-interactive version, with input_list and outfile specified
+        if input_list != None:
+            for device in input_list:
+                short_name_prefix, long_name_prefix, elec_type, file_name = device[0], device[1], device[2], device[3]
+                if short_name_prefix.lower() == 'nan' or long_name_prefix.lower() == 'nan' or elec_type.lower() == 'nan' or file_name == 'nan':
+                    num_empty_rows = file_name
+                    elecmatrix_all.append(np.ones((num_empty_rows,3))*np.nan)
+                    short_names.extend([short_name_prefix for i in range(num_empty_rows)])
+                    long_names.extend([long_name_prefix for i in range(num_empty_rows)])
+                    elec_types.extend([elec_type for i in range(num_empty_rows)])
+                else:
+                    indiv_file = os.path.join(self.elecs_dir,'individual_elecs', file_name)
+                    elecmatrix = scipy.io.loadmat(indiv_file)['elecmatrix']
+                    num_elecs = elecmatrix.shape[0]
+                    elecmatrix_all.append(elecmatrix)
+                    short_names.extend([short_name_prefix+str(i) for i in range(1, num_elecs+1)])
+                    long_names.extend([long_name_prefix+str(i) for i in range(1, num_elecs+1)])
+                    elec_types.extend([elec_type for i in range(num_elecs)])
+        else: #interactive
+            done = False
+            while done == False:
+                short_name_prefix = raw_input('What is the name of the device? (Write "done" if finished)\n')
+                long_name_prefix = short_name_prefix
+                elec_type = 'depth'
+                if short_name_prefix == 'done':
+                    done == True     
+                try:
+                    file_name = short_name_prefix
+                    indiv_file = os.path.join(self.elecs_dir,'individual_elecs', file_name)
+                    elecmatrix = scipy.io.loadmat(indiv_file)['elecmatrix']
+                except IOError:
+                    file_name = raw_input('Sorry, that file was not found. Please enter the correct filename of the device: \n ')
+                    indiv_file = os.path.join(self.elecs_dir,'individual_elecs', file_name)
+                    elecmatrix = scipy.io.loadmat(indiv_file)['elecmatrix']
+                num_elecs = elecmatrix.shape[0]
+                elecmatrix_all.append(elecmatrix)
+                short_names.extend([short_name_prefix+str(i) for i in range(1,num_elecs+1)])
+                long_names.extend([long_name_prefix+str(i) for i in range(1,num_elecs+1)])
+                elec_types.extend([elec_type for i in range(num_elecs)])
             outfile = raw_input('What filename would you like to save out to?\n')
         elecmatrix_all = np.vstack(elecmatrix_all)
         eleclabels = np.ones(elecmatrix_all.shape,dtype=np.object)

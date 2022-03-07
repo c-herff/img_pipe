@@ -148,7 +148,7 @@ class freeCoG:
         if not hem in ['rh', 'lh', 'stereo']:
             raise NameError('Invalid hem for freeCoG')
 
-        if not subfield_scan in ['None', 'T1', 'T2', 'T1-T2']:
+        if not subfield_scan in ['None', 'T1', 'T2', 'T1-T2','FLAIR']:
             raise NameError('Invalid subfield_scan for freeCoG')
 
         if not recon_scan in ['None', 'T2', 'FLAIR']:
@@ -316,7 +316,11 @@ class freeCoG:
         elif self.subfield_scan=='T1-T2':
             seg_T2 = os.path.join(self.fs_dir, 'bin','segmentHA_T2.sh')
             scanT2 = os.path.join(self.subj_dir, self.subj, 'mri', 'T2.nii')
-            os.system("%s %s %s T2 1 %s"%(seg_T2, self.subj, scanT2, self.subj_dir))
+            os.system("%s %s %s T2 1 %s"%(seg_T2, self.subj, scanT2, self.subj_dir))        
+        elif self.subfield_scan=='FLAIR':
+            seg_T2 = os.path.join(self.fs_dir, 'bin','segmentHA_T2.sh')
+            scanT2 = os.path.join(self.subj_dir, self.subj, 'mri', 'FLAIR.nii')
+            os.system("%s %s %s FLAIR 0 %s"%(seg_T2, self.subj, scanT2, self.subj_dir))
         else:
             seg_T2 = os.path.join(self.fs_dir, 'bin','segmentHA_T2.sh')
             scanT2 = os.path.join(self.subj_dir, self.subj, 'mri', 'T2.nii')

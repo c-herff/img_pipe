@@ -4,9 +4,12 @@
 # 
 
 import matplotlib
-matplotlib.use('Qt4Agg') 
+matplotlib.use('Qt5Agg') 
 matplotlib.rcParams['toolbar'] = 'None'
-from pyface.qt import QtGui, QtCore
+#from pyface.qt import QtGui, QtCore
+from PyQt5.QtWidgets import QApplication, QInputDialog, QWidget 
+from PyQt5.QtGui import QIcon
+from PyQt5 import QtCore #QtWidgets,
 from matplotlib import pyplot as plt
 plt.rcParams['keymap.save'] = '' # Unbind 's' key saving
 plt.rcParams['font.family'] = 'sans-serif'
@@ -24,8 +27,8 @@ import matplotlib.patches as mpatches
 import scipy.io
 import os
 import warnings
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+#from PyQt4.QtGui import *
+#from PyQt4.QtCore import *
 from matplotlib.widgets import Slider
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -235,7 +238,7 @@ class electrode_picker:
         self.fig=plt.figure(figsize=(12,10))
         self.fig.canvas.set_window_title('Electrode Picker')
         thismanager = plt.get_current_fig_manager()
-        thismanager.window.setWindowIcon(QtGui.QIcon((os.path.join('icons','leftbrain_blackbg.png'))))
+        thismanager.window.setWindowIcon(QIcon((os.path.join('icons','leftbrain_blackbg.png'))))
         
         self.im = []
         self.ct_im = []
@@ -263,7 +266,7 @@ class electrode_picker:
         # Plot sagittal, coronal, and axial views 
         for i in np.arange(3):
             self.ax.append(self.fig.add_subplot(2,2,i+1))
-            self.ax[i].set_axis_bgcolor('k')
+            self.ax[i].set_facecolor('k')
             if i==0:
                 imdata = img_data[cs[0],:,:].T
                 ctdat  = ct_data[cs[0],:,:].T
@@ -313,7 +316,7 @@ class electrode_picker:
         # Plot the maximum intensity projection
         self.ct_slice = 's' # Show sagittal MIP to start
         self.ax.append(self.fig.add_subplot(2,2,4))
-        self.ax[3].set_axis_bgcolor('k')
+        self.ax[3].set_facecolor('k')
         self.im.append(plt.imshow(np.nanmax(ct_data[cs[0]-15:cs[0]+15,:,:], axis=0).T, cmap=cm.gray, aspect='auto'))
         self.cursor.append(plt.plot([cs[1], cs[1]], [self.ax[3].get_ylim()[0]+1, self.ax[3].get_ylim()[1]-1], color=[0, 1, 0] ))
         self.cursor2.append(plt.plot([self.ax[3].get_xlim()[0]+1, self.ax[3].get_xlim()[1]-1], [cs[2], cs[2]], color=[0, 1, 0] ))
@@ -879,9 +882,9 @@ class electrode_picker:
 
 
 if __name__ == '__main__':
-    app = QtGui.QApplication([])
+    app = QApplication([])
     path_to_this_func = os.path.dirname(os.path.realpath(__file__))
-    app.setWindowIcon(QtGui.QIcon(os.path.join(path_to_this_func, 'icons','leftbrain.png')))
+    app.setWindowIcon(QIcon(os.path.join(path_to_this_func, 'icons','leftbrain.png')))
     subj_dir = sys.argv[1]
     hem = sys.argv[2]
     e = electrode_picker(subj_dir = subj_dir, hem = hem)

@@ -10,7 +10,6 @@
 # This file contains the Chang Lab imaging pipeline (freeCoG)
 # as one importable python class for running a patients
 # brain surface reconstruction and electrode localization/labeling
-#test
 
 import os
 import glob
@@ -569,6 +568,59 @@ class freeCoG:
         #     elecmatrix[lead,i] = np.linspace(elecmatrix[:,i], elecmatrix[(lead[-1]-lead[0]),i], ncols)
 
         orig_file = os.path.join(self.elecs_dir, 'individual_elecs', '%s.mat'%(grid_basename))
+        scipy.io.savemat(orig_file, {'elecmatrix': elecmatrix} )
+
+    def interp_exterp_stereo(self, c1=1, c2=8, ncontacts=10, elec_basename='RA'):
+        '''Inter- and exterpolates contacts for a stereo-eeg electrode given two
+        marked contacts (e.g., 1 and 8 for a shaft of size 10).
+        
+        Parameters
+        ----------
+        c1 : int
+            Number of the first defined contact
+        c2 : int
+            Number of the second defined contact
+        ncontacts : int
+            Number of contacts in the electrode
+        elec_basename : str
+            The base name of the electrode (e.g. 'LA' if you have a marker file
+            called LA_ends.mat)
+        
+        '''
+
+        # Load contact coordinates and arrays
+        ends_file = os.path.join(self.elecs_dir, 'individual_elecs', elec_basename+'_ends.mat')
+        ends = scipy.io.loadmat(ends_file)['elecmatrix']
+        elecmatrix = np.zeros((ncontacts, 3))
+        distances = np.zeros(3)
+
+        # Change contact number into index number and calculate amount including markers
+        c1 = c1-1
+        c2 = c2-1
+
+        # Calculate amount of contacts for interpolation
+        ncontacts_int = (c2-c1)+1
+
+        # Add the electrode coordinates for the marked contacts
+        elecmatrix[c1,:] = ends[0,:]
+        elecmatrix[c2,:] = ends[1,:]
+
+        # Interpolate between the two marked contacts and loop over x, y, and z coordinates
+        for i in np.arange(3):
+            elecmatrix[c1:c2+1,i] = np.linspace(elecmatrix[c1,i], elecmatrix[c2,i], ncontacts_int)
+            distances[i] = (elecmatrix[c2,i]-elecmatrix[c1,i])/ncontacts_int
+
+        # Exterpolate based on distance between interpolated contacts and loop over x, y, and z coordinates
+        for i in np.arange(3):
+            if c1 > 0: 
+                start = elecmatrix[c1,i]-(distances[i]*c1)
+                elecmatrix[0:c1+1,i] = np.linspace(start, elecmatrix[c1,i], c1+1)
+            if c2 < ncontacts-1:
+                stop = elecmatrix[c2,i]+(distances[i]*(ncontacts-c2))
+                elecmatrix[c2:ncontacts,i] = np.linspace(elecmatrix[c2,i], stop, ncontacts-c2)
+
+        # Save new electrode matrix
+        orig_file = os.path.join(self.elecs_dir, 'individual_elecs', '%s.mat'%(elec_basename))
         scipy.io.savemat(orig_file, {'elecmatrix': elecmatrix} )
 
     def project_electrodes(self, elecfile_prefix='hd_grid', use_mean_normal=True, \

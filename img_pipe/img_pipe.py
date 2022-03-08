@@ -430,16 +430,14 @@ class freeCoG:
             self.pial_surf_file['rh'] = os.path.join(self.subj_dir, self.subj, 'Meshes', 'rh_pial_trivert.mat')
         else:
             setattr(self, mesh_name+'_surf_file', out_file)
-  
-    def reg_img(self, source='CT.nii', target='orig.mgz', smooth=0., reg_type='rigid', interp='pv', xtol=0.0001, ftol=0.0001, resample=False):
+
+    def reg_img(self, source='CT.nii', target='orig.mgz', smooth=0., reg_type='rigid', interp='pv', xtol=0.0001, ftol=0.0001, savehr=True):
         '''Runs nmi coregistration between two images.
         Usually run as patient.reg_img() 
         You can also specify the source (usually a CT scan, assumed to be in $SUBJECTS_DIR/subj/CT)
         and the target (usually T1 MRI, assumed to be in $SUBJECTS_DIR/subj/mri)
-
         Parameters are arguments for nipy.algorithms.registration.histogram_registration.HistogramRegistration
         (for more information, see help for nipy.algorithms.registration.optimizer).
-
         Parameters
         ----------
         smooth : float
@@ -453,11 +451,39 @@ class freeCoG:
         ftol : float
             tolerance parameter for function minimization
 
+        Update: 08-03-2022, Sophocles:
+
+        savehr: True or False
+            upsamples the orig.mgz and the brain.mgz to 512^3, 0.5mmm iso
+            saves  brain_highRes.mgz and orig_highRes.mgz
+            and coregisters upsampled CT as as rCT_highRes.nii 
             
         '''
-
-        source_file = os.path.join(self.CT_dir, source)
         target_file = os.path.join(self.mri_dir, target)
+        source_file = os.path.join(self.CT_dir, source)
+        orig_highRes = os.path.join(self.mri_dir, 'orig_highRes.mgz')
+        brain = os.path.join(self.mri_dir, 'brain.mgz')
+        brain_highRes = os.path.join(self.mri_dir, 'brain_highRes.mgz')
+            
+        if savehr:
+            print("Computing upsampled versions of brain.mgz and orig.mgz")
+        	os.system('mri_convert --upsample 2 %s %s' % (target_file, orig_highRes))
+        	os.system('mri_convert --upsample 2 %s %s' % (brain, brain_highRes))
+            print("Computing registration from CT.nii to upsampled orig_highRes.mgz")
+            ctimg  = nipy.load_image(source_file)
+            mriimg = nipy.load_image(orig_highRes)
+            ct_cmap = ctimg.coordmap  
+            mri_cmap = mriimg.coordmap
+            # Compute registration
+            ct_to_mri_reg = nipy.algorithms.registration.histogram_registration.HistogramRegistration(ctimg, mriimg, similarity='nmi', smooth=smooth, interp=interp)
+            aff = ct_to_mri_reg.optimize(reg_type).as_affine()   
+
+            ct_to_mri = AffineTransform(ct_cmap.function_range, mri_cmap.function_range, aff)  
+            reg_CT = nipy.algorithms.resample.resample(ctimg, mri_cmap, ct_to_mri.inverse(), mriimg.shape)    
+
+            outfile = os.path.join(self.CT_dir, 'rCT_highRes.nii')
+            print("Saving registration as rCT_highRes.nii")
+            nipy.save_image(reg_CT, outfile)
 
         print("Computing registration from %s to %s"%(source_file, target_file))
         ctimg  = nipy.load_image(source_file)
@@ -469,12 +495,9 @@ class freeCoG:
         # Compute registration
         ct_to_mri_reg = nipy.algorithms.registration.histogram_registration.HistogramRegistration(ctimg, mriimg, similarity='nmi', smooth=smooth, interp=interp)
         aff = ct_to_mri_reg.optimize(reg_type).as_affine()   
-        if resample:
-            ct_to_mri = AffineTransform(ct_cmap.function_range, mri_cmap.function_range, aff)  
-            reg_CT = nipy.algorithms.resample.resample(ctimg, mri_cmap, ct_to_mri.inverse(), mriimg.shape)
-        else:
-            ct_to_mri = AffineTransform(ct_cmap.function_range, ct_cmap.function_range, aff) 
-            reg_CT = nipy.algorithms.resample.resample(ctimg, ct_cmap, ct_to_mri.inverse(), ctimg.shape)    
+
+        ct_to_mri = AffineTransform(ct_cmap.function_range, mri_cmap.function_range, aff)  
+        reg_CT = nipy.algorithms.resample.resample(ctimg, mri_cmap, ct_to_mri.inverse(), mriimg.shape)    
 
         outfile = os.path.join(self.CT_dir, 'r'+source)
         print("Saving registered CT image as %s"%(outfile))

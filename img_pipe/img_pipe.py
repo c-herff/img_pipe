@@ -467,8 +467,8 @@ class freeCoG:
             
         if savehr:
             print("Computing upsampled versions of brain.mgz and orig.mgz")
-        	os.system('mri_convert --upsample 2 %s %s' % (target_file, orig_highRes))
-        	os.system('mri_convert --upsample 2 %s %s' % (brain, brain_highRes))
+            os.system('mri_convert --upsample 2 %s %s' % (target_file, orig_highRes))
+            os.system('mri_convert --upsample 2 %s %s' % (brain, brain_highRes))
             print("Computing registration from CT.nii to upsampled orig_highRes.mgz")
             ctimg  = nipy.load_image(source_file)
             mriimg = nipy.load_image(orig_highRes)

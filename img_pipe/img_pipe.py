@@ -593,8 +593,8 @@ class freeCoG:
         orig_file = os.path.join(self.elecs_dir, 'individual_elecs', '%s.mat'%(grid_basename))
         scipy.io.savemat(orig_file, {'elecmatrix': elecmatrix} )
 
-    def interp_exterp_stereo(self, c1=1, c2=8, ncontacts=10, elec_basename='RA'):
-        '''Inter- and exterpolates contacts for a stereo-eeg electrode given two
+    def interp_extrap_stereo(self, c1=1, c2=8, ncontacts=10, elec_basename='RA'):
+        '''Inter- and extrapolates contacts for a stereo-eeg electrode given two
         marked contacts (e.g., 1 and 8 for a shaft of size 10).
         
         Parameters
@@ -633,7 +633,7 @@ class freeCoG:
             elecmatrix[c1:c2+1,i] = np.linspace(elecmatrix[c1,i], elecmatrix[c2,i], ncontacts_int)
             distances[i] = (elecmatrix[c2,i]-elecmatrix[c1,i])/ncontacts_int
 
-        # Exterpolate based on distance between interpolated contacts and loop over x, y, and z coordinates
+        # Extrapolate based on distance between interpolated contacts and loop over x, y, and z coordinates
         for i in np.arange(3):
             if c1 > 0: 
                 start = elecmatrix[c1,i]-(distances[i]*c1)

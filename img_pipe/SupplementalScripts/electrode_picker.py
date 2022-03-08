@@ -4,6 +4,7 @@
 # 
 
 import matplotlib
+import distutils
 matplotlib.use('Qt5Agg') 
 matplotlib.rcParams['toolbar'] = 'None'
 #from pyface.qt import QtGui, QtCore
@@ -65,12 +66,12 @@ class electrode_picker:
     Written by Liberty Hamilton, 2017
 
     '''
-    def __init__(self, subj_dir, hem):
+    def __init__(self, subj_dir, hem, highRes=False):
         '''
         Initialize the electrode picker with the user-defined MRI and co-registered
         CT scan in [subj_dir].  Images will be displayed using orientation information 
         obtained from the image header. Images will be resampled to dimensions 
-        [256,256,256] for display.
+        [256,256,256] for display or [512,512,512] if highRes is set to TRUE
         We will also listen for keyboard and mouse events so the user can interact
         with each of the subplot panels (zoom/pan) and add/remove electrodes with a 
         keystroke.
@@ -81,6 +82,8 @@ class electrode_picker:
             Path to freesurfer subjects
         hem : {'lh', 'rh', 'stereo'}
             Hemisphere of implantation.
+        highRes: boolean 
+            Should high resolution scans be used
 
         Attributes
         ----------
@@ -163,8 +166,12 @@ class electrode_picker:
         if hem == 'stereo':
             hem = 'lh' # For now, set to lh because hemisphere isn't used in stereo case
         self.hem = hem
-        self.img = nib.load(os.path.join(subj_dir, 'mri', 'brain.mgz'))
-        self.ct = nib.load(os.path.join(subj_dir, 'CT', 'rCT.nii'))
+        if highRes:
+            self.img = nib.load(os.path.join(subj_dir, 'mri', 'brain_highRes.mgz'))
+            self.ct = nib.load(os.path.join(subj_dir, 'CT', 'rCT_highRes.nii'))    
+        else:
+            self.img = nib.load(os.path.join(subj_dir, 'mri', 'brain.mgz'))
+            self.ct = nib.load(os.path.join(subj_dir, 'CT', 'rCT.nii'))
         pial_fill = os.path.join(subj_dir, 'surf', '%s.pial.filled.mgz'%(self.hem))
         if not os.path.isfile(pial_fill):
             pial_surf = os.path.join(subj_dir, 'surf', '%s.pial'%(self.hem))
@@ -176,10 +183,16 @@ class electrode_picker:
         
         # Get affine transform 
         self.affine = self.img.affine
-        self.fsVox2RAS = np.array([[-1., 0., 0., 128.], 
-                                   [0., 0., 1., -128.], 
-                                   [0., -1., 0., 128.], 
-                                   [0., 0., 0., 1.]])
+        if highRes:
+            self.fsVox2RAS = np.array([[-.5, 0., 0., 128.], 
+                                    [0., 0., .5, -128.], 
+                                    [0., -.5, 0., 128.], 
+                                    [0., 0., 0., 1.]])
+        else:
+            self.fsVox2RAS = np.array([[-1., 0., 0., 128.], 
+                                    [0., 0., 1., -128.], 
+                                    [0., -1., 0., 128.], 
+                                    [0., 0., 0., 1.]])
         
         # Apply orientation to the MRI so that the order of the dimensions will be
         # sagittal, coronal, axial
@@ -202,9 +215,12 @@ class electrode_picker:
         ct_data = nib.orientations.apply_orientation(self.ct.get_data(), self.ct_codes)
 
         cx,cy,cz=np.array(ct_data.shape, dtype='float')       
+        px,py,pz=np.array(pial_data.shape, dtype='float')
+        
+        
+        # Resample images to the highest resolution
+        voxsz = (np.max([cx,nx]),np.max([cy,ny]),np.max([cz,nz]))
 
-        # Resample both images to the highest resolution
-        voxsz = (256, 256, 256)
         if ct_data.shape != voxsz:
             print("Resizing voxels in CT")
             ct_data = scipy.ndimage.zoom(ct_data, [voxsz[0]/cx, voxsz[1]/cy, voxsz[2]/cz])
@@ -213,6 +229,9 @@ class electrode_picker:
             print("Resizing voxels in MRI")
             img_data = scipy.ndimage.zoom(img_data, [voxsz[0]/nx, voxsz[1]/ny, voxsz[2]/nz])
             print(img_data.shape)
+        if pial_data.shape != voxsz:
+            print("Resizing voxels in pial")
+            pial_data = scipy.ndimage.zoom(pial_data, [voxsz[0]/px, voxsz[1]/py, voxsz[2]/pz])
         
         # Threshold the CT so only bright objects (electrodes) are visible
         ct_data[ct_data < 1000] = np.nan
@@ -230,8 +249,8 @@ class electrode_picker:
         self.legend_handles = [] # This will hold legend entries
         self.elec_added = False # Whether we're in an electrode added state
 
-        self.imsz = [256, 256, 256]
-        self.ctsz = [256, 256, 256]
+        self.imsz = list(voxsz)#[256, 256, 256]
+        self.ctsz = list(voxsz)#[256, 256, 256]
         
         self.current_slice = np.array([self.imsz[0]/2, self.imsz[1]/2, self.imsz[2]/2], dtype=np.float)
         
@@ -887,4 +906,8 @@ if __name__ == '__main__':
     app.setWindowIcon(QIcon(os.path.join(path_to_this_func, 'icons','leftbrain.png')))
     subj_dir = sys.argv[1]
     hem = sys.argv[2]
-    e = electrode_picker(subj_dir = subj_dir, hem = hem)
+    if len(sys.argv)>3:
+        highRes=bool(distutils.util.strtobool(sys.argv[3]))
+    else:
+        highRes=False
+    e = electrode_picker(subj_dir = subj_dir, hem = hem,highRes=highRes)

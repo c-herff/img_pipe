@@ -376,7 +376,7 @@ class freeCoG:
         
         self.convert_fsmesh2mlab(mesh_name = 'dural')
 
-    def mark_electrodes(self):
+    def mark_electrodes(self,highRes=False):
         ''' Launch the electrode picker for this subject. The electrode
         picker requires the Qt4Agg backend, so is launched via an external
         python script. 
@@ -390,7 +390,7 @@ class freeCoG:
             os.mkdir(individual_elecs_dir)
         print("Launching electrode picker")
         epicker = os.path.join(self.img_pipe_dir, 'SupplementalScripts', 'electrode_picker.py')
-        os.system('python %s %s %s'%(epicker, os.path.join(self.subj_dir, self.subj), self.hem))
+        os.system('python %s %s %s'%(epicker, os.path.join(self.subj_dir, self.subj), self.hem, str(highRes)))
 
     def convert_fsmesh2mlab(self, mesh_name='pial'):
         '''Creates surface mesh triangle and vertex .mat files

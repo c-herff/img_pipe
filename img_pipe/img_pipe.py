@@ -1094,13 +1094,12 @@ class freeCoG:
                     long_names.extend([long_name_prefix+str(i) for i in range(1, num_elecs+1)])
                     elec_types.extend([elec_type for i in range(num_elecs)])
         else: #interactive
-            done = False
-            while done == False:
+            while True:
                 short_name_prefix = input('What is the name of the device? (Write "done" if finished)\n')
                 long_name_prefix = short_name_prefix
                 elec_type = 'depth'
                 if short_name_prefix == 'done':
-                    done == True     
+                    break
                 try:
                     file_name = short_name_prefix
                     indiv_file = os.path.join(self.elecs_dir,'individual_elecs', file_name)

@@ -266,11 +266,11 @@ class freeCoG:
 
         #os.system('recon-all -cw256 -subjid %s -sd %s -all %s %s %s' % (self.subj, self.subj_dir, flag_T3, openmp_flag, gpu_flag))
         if self.recon_scan == 'FLAIR':
-        	os.system('recon-all -cw256 -subjid %s -sd %s -FLAIR %s/FLAIR.nii -FLAIRpial -all %s %s %s' % (self.subj, self.subj_dir, self.mri_dir, flag_T3, openmp_flag, gpu_flag))
+            os.system('recon-all -cw256 -subjid %s -sd %s -FLAIR %s/FLAIR.nii -FLAIRpial -all %s %s %s' % (self.subj, self.subj_dir, self.mri_dir, flag_T3, openmp_flag, gpu_flag))
         elif self.recon_scan == 'T2':
-        	os.system('recon-all -cw256 -subjid %s -sd %s -T2 %s/T2.nii -T2pial -all %s %s %s' % (self.subj, self.subj_dir, self.mri_dir, flag_T3, openmp_flag, gpu_flag))
-    	else:
-        	os.system('recon-all -cw256 -subjid %s -sd %s -all %s %s %s' % (self.subj, self.subj_dir, flag_T3, openmp_flag, gpu_flag))
+            os.system('recon-all -cw256 -subjid %s -sd %s -T2 %s/T2.nii -T2pial -all %s %s %s' % (self.subj, self.subj_dir, self.mri_dir, flag_T3, openmp_flag, gpu_flag))
+        else:
+            os.system('recon-all -cw256 -subjid %s -sd %s -all %s %s %s' % (self.subj, self.subj_dir, flag_T3, openmp_flag, gpu_flag))
 
 
         self.pial_surf_file = dict()
@@ -1301,7 +1301,7 @@ class freeCoG:
             LUT = [row.split() for row in LUT]
             lab = {}
             for row in LUT:
-                if len(row)>1 and row[0][0] is not '#' and row[0][0] is not '\\': # Get rid of the comments
+                if len(row)>1 and row[0][0]!='#' and row[0][0]!='\\': # Get rid of the comments
                     lname = row[1]
                     lab[np.int(row[0])] = lname
 

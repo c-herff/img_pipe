@@ -390,7 +390,7 @@ class freeCoG:
             os.mkdir(individual_elecs_dir)
         print("Launching electrode picker")
         epicker = os.path.join(self.img_pipe_dir, 'SupplementalScripts', 'electrode_picker.py')
-        os.system('python %s %s %s'%(epicker, os.path.join(self.subj_dir, self.subj), self.hem, str(highRes)))
+        os.system('python %s %s %s %s'%(epicker, os.path.join(self.subj_dir, self.subj), self.hem, str(highRes)))
 
     def convert_fsmesh2mlab(self, mesh_name='pial'):
         '''Creates surface mesh triangle and vertex .mat files

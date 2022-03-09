@@ -17,6 +17,7 @@ import pickle
 import shutil
 import argparse
 import inspect
+import json
 
 import nibabel as nib
 from tqdm import tqdm
@@ -378,7 +379,7 @@ class freeCoG:
 
     def mark_electrodes(self,highRes=False):
         ''' Launch the electrode picker for this subject. The electrode
-        picker requires the Qt4Agg backend, so is launched via an external
+        picker requires the Qt5Agg backend, so is launched via an external
         python script. 
 
         Inputs to the electrode_picker.py script include the subject directory and the hemisphere
@@ -1121,6 +1122,45 @@ class freeCoG:
         eleclabels[:,2] = elec_types
         label_outfile = os.path.join(self.elecs_dir, '%s.mat'%(outfile))
         scipy.io.savemat(label_outfile,{'eleclabels':eleclabels,'elecmatrix':elecmatrix_all})
+
+    def make_fsControlPoints(self, input_list=None, outfile='elecs_fsControlPoints.json'):
+        '''Creates a .json file with the montage and coordinates of 
+        all the elecs files in the /elecs_individual folder.        
+        
+        Parameters
+        ----------
+        input_list : list of device names or None
+            Where the device names are the filenames is the elecmatrix .mat file of the 
+            device, and should be in the elecs/individual_elecs folder. 
+            If None use all electrodes
+        outfile : str
+            the name of the file you want to save to
+
+        Usage
+        -----
+        >>> patient.make_elecs_all(input_list=['LH','LI'], outfile='elecs_ControlPoints.json')
+        
+        '''
+        #non-interactive version, with input_list and outfile specified
+        if input_list == None:
+            #Get all filenames from folder
+            pass
+
+        
+        points = []
+        for device in input_list:
+            indiv_file = os.path.join(self.elecs_dir,'individual_elecs', device + '.mat')
+            elecmatrix = scipy.io.loadmat(indiv_file)['elecmatrix']
+            num_elecs = elecmatrix.shape[0]
+            for el in np.arange(num_elecs):
+                coords = {'x': elecmatrix[el,0], 'y': elecmatrix[el,1], 'z': elecmatrix[el,2] }
+                point = {'legacy_stat':1,'statistics':{device+str(el+1) : el+1},'coordinates':coords}
+                points.append(point)
+        controlPoints = {'data_type':'fs_pointset','points':points,'vox2ras':'scanner_ras'}
+        cp_outfile = os.path.join(self.elecs_dir, outfile)
+        with open(cp_outfile,'w') as out:
+            json.dump(controlPoints,out)
+        out.close()
 
     def edit_elecs_all(self, revision_dict, elecfile_prefix='TDT_elecs_all'):
         '''Edit the anatomy matrix of the elecfile_prefix. 

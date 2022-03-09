@@ -631,7 +631,7 @@ class freeCoG:
         # Interpolate between the two marked contacts and loop over x, y, and z coordinates
         for i in np.arange(3):
             elecmatrix[c1:c2+1,i] = np.linspace(elecmatrix[c1,i], elecmatrix[c2,i], ncontacts_int)
-            distances[i] = (elecmatrix[c2,i]-elecmatrix[c1,i])/ncontacts_int
+            distances[i] = (elecmatrix[c2,i]-elecmatrix[c1,i])/(ncontacts_int-1)
 
         # Extrapolate based on distance between interpolated contacts and loop over x, y, and z coordinates
         for i in np.arange(3):
@@ -639,7 +639,7 @@ class freeCoG:
                 start = elecmatrix[c1,i]-(distances[i]*c1)
                 elecmatrix[0:c1+1,i] = np.linspace(start, elecmatrix[c1,i], c1+1)
             if c2 < ncontacts-1:
-                stop = elecmatrix[c2,i]+(distances[i]*(ncontacts-c2))
+                stop = elecmatrix[c2,i]+(distances[i]*(ncontacts-1-c2))
                 elecmatrix[c2:ncontacts,i] = np.linspace(elecmatrix[c2,i], stop, ncontacts-c2)
 
         # Save new electrode matrix

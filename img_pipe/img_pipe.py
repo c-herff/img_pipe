@@ -1155,14 +1155,21 @@ class freeCoG:
         if input_list == None:
             #Get all filenames from folder
             pass
-
         
+        fsVox2RAS = np.array(
+            [[-1., 0., 0., 128.], [0., 0., 1., -128.], [0., -1., 0., 128.], [0., 0., 0., 1.]])
+        orig_file = os.path.join(self.subj_dir, self.subj, 'mri', 'orig.mgz')
+        orig = nib.load(orig_file)
+        aff = orig.affine
+        transform = np.dot(aff, np.linalg(fsVox2RAS))
         points = []
         for device in input_list:
             indiv_file = os.path.join(self.elecs_dir,'individual_elecs', device + '.mat')
             elecmatrix = scipy.io.loadmat(indiv_file)['elecmatrix']
+            elecmatrix = np.hstack(elecmatrix,np.ones((elecmatrix.shape[0],1)))
+            elecmatrix = np.dot(transform,elecmatrix.T).T[:,:3]
             num_elecs = elecmatrix.shape[0]
-            for el in np.arange(num_elecs):
+            for el in range(num_elecs):
                 coords = {'x': elecmatrix[el,0], 'y': elecmatrix[el,1], 'z': elecmatrix[el,2] }
                 point = {'legacy_stat':1,'statistics':{device+str(el+1) : el+1},'coordinates':coords}
                 points.append(point)

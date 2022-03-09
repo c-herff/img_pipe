@@ -18,6 +18,8 @@ import shutil
 import argparse
 import inspect
 
+from sklearn.metrics import euclidean_distances
+
 import nibabel as nib
 from tqdm import tqdm
 
@@ -593,7 +595,7 @@ class freeCoG:
         orig_file = os.path.join(self.elecs_dir, 'individual_elecs', '%s.mat'%(grid_basename))
         scipy.io.savemat(orig_file, {'elecmatrix': elecmatrix} )
 
-    def interp_extrap_stereo(self, c1=1, c2=8, ncontacts=10, elec_basename='RA'):
+    def interp_extrap_stereo(self, c1=1, c2=8, ncontacts=10, elec_basename='RA', ied = 3.5):
         '''Inter- and extrapolates contacts for a stereo-eeg electrode given two
         marked contacts (e.g., 1 and 8 for a shaft of size 10).
         
@@ -608,6 +610,8 @@ class freeCoG:
         elec_basename : str
             The base name of the electrode (e.g. 'LA' if you have a marker file
             called LA_ends.mat)
+        ied : float
+            The expected inter-electrode distance in millimeters
         
         '''
 
@@ -632,6 +636,12 @@ class freeCoG:
         for i in np.arange(3):
             elecmatrix[c1:c2+1,i] = np.linspace(elecmatrix[c1,i], elecmatrix[c2,i], ncontacts_int)
             distances[i] = (elecmatrix[c2,i]-elecmatrix[c1,i])/(ncontacts_int-1)
+        
+        # Warn if inter-electrode distance is not as expected
+        ed = scipy.spatial.distance.euclidean(elecmatrix[c1,:], elecmatrix[c2,:])/(ncontacts_int-1)
+        if not ied-0.1 < ed < ied+0.1:
+            print(f'Warning: Inter-electrode distance is currently {ed:.3f} (expected {ied}); '
+                'please check the input to this function or re-do the electrode placement.')
 
         # Extrapolate based on distance between interpolated contacts and loop over x, y, and z coordinates
         for i in np.arange(3):

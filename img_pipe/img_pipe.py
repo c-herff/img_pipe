@@ -1250,7 +1250,7 @@ class freeCoG:
 
         return vert_inds, nearest_verts
 
-    def label_elecs(self, elecfile_prefix='TDT_elecs_all', atlas_surf='desikan-killiany', atlas_depth='destrieux', elecs_all=True):
+    def label_elecs(self, elecfile_prefix='TDT_elecs_all', atlas_surf='desikan-killiany', atlas_depth='destrieux', output_nm='elecs_all_anat', elecs_all=True):
         ''' Automatically labels electrodes based on the freesurfer annotation file.
         Assumes TDT_elecs_all.mat or clinical_elecs_all.mat files
         Uses both the Desikan-Killiany Atlas and the Destrieux Atlas, as described 
@@ -1259,11 +1259,13 @@ class freeCoG:
         Parameters
         ----------
         elecfile_prefix : str, optional
-            prefix of the .mat file with the electrode coordinates matrix
+            Prefix of the .mat file with the electrode coordinates matrix
         atlas_surf : {'desikan-killiany', 'destrieux'}
             The atlas to use for labeling of surface electrodes.
-        atlas_depth : {'destrieux', 'desikan-killiany'}
+        atlas_depth : {'destrieux', 'desikan-killiany', 'wm'}
             The atlas to use for labeling of depth electrodes.
+        output_nm : str
+            Name of the output file (.mat with elecmatrix + anatomy)
         elecs_all : bool
             Label all electrodes
         
@@ -1394,13 +1396,15 @@ class freeCoG:
             # Get the volume corresponding to the labels from the Destrieux atlas, which is more 
             # detailed than Desikan-Killiany (https://surfer.nmr.mgh.harvard.edu/fswiki/CorticalParcellation)
             if atlas_depth == 'desikan-killiany':
-                depth_atlas_nm = ''
+                depth_atlas_nm = 'aparc+aseg'
             elif atlas_depth == 'destrieux':
-                depth_atlas_nm = '.a2009s'
+                depth_atlas_nm = 'aparc.2009s+aseg'
+            elif atlas_depth == 'wm':
+                depth_atlas_nm = 'wmparc'
             else:
-                depth_atlas_nm = '.a2009s'
+                depth_atlas_nm = atlas_depth
 
-            aseg_file = os.path.join(self.subj_dir, self.subj, 'mri', 'aparc%s+aseg.mgz'%(depth_atlas_nm))
+            aseg_file = os.path.join(self.subj_dir, self.subj, 'mri', '%s.mgz'%(depth_atlas_nm))
             dat = nib.freesurfer.load(aseg_file)
             aparc_dat = dat.get_data()
              
@@ -1481,8 +1485,8 @@ class freeCoG:
         elec_labels_orig[:,3] = ''
         elec_labels_orig[indices_to_use,3] = elec_labels[:,3] 
         
-        print('Saving electrode labels to %s'%(elecfile_prefix))
-        scipy.io.savemat(os.path.join(self.elecs_dir, elecfile_prefix+'.mat'), {'elecmatrix': elecmatrix_orig, 
+        print('Saving electrode labels to %s'%(output_nm))
+        scipy.io.savemat(os.path.join(self.elecs_dir, output_nm+'.mat'), {'elecmatrix': elecmatrix_orig, 
                                                                                 'anatomy': elec_labels_orig,
                                                                                 # 'anatomySF': , 
                                                                                 'eleclabels': elecmontage})

@@ -1133,9 +1133,15 @@ class freeCoG:
         label_outfile = os.path.join(self.elecs_dir, '%s.mat'%(outfile))
         scipy.io.savemat(label_outfile,{'eleclabels':eleclabels,'elecmatrix':elecmatrix_all})
 
+    def make_allfsControlPoints():
+        individual_Elec_path = os.path.join(self.elecs_dir,'individual_elecs')
+        matfiles = [f for f in os.listdir(mypath) if os.isfile(join(individual_Elec_path, f) and f[:-3]=='mat')]
+        for file in matfiles:
+            pass
+    
     def make_fsControlPoints(self, input_list=None, outfile='elecs_fsControlPoints.json'):
         '''Creates a .json file with the montage and coordinates of 
-        all the elecs files in the /elecs_individual folder.        
+        elecs files in the /elecs_individual folder.        
         
         Parameters
         ----------
@@ -1151,22 +1157,17 @@ class freeCoG:
         >>> patient.make_elecs_all(input_list=['LH','LI'], outfile='elecs_ControlPoints.json')
         
         '''
-        #non-interactive version, with input_list and outfile specified
-        if input_list == None:
-            #Get all filenames from folder
-            pass
-        
         fsVox2RAS = np.array(
             [[-1., 0., 0., 128.], [0., 0., 1., -128.], [0., -1., 0., 128.], [0., 0., 0., 1.]])
         orig_file = os.path.join(self.subj_dir, self.subj, 'mri', 'orig.mgz')
         orig = nib.load(orig_file)
         aff = orig.affine
-        transform = np.dot(aff, np.linalg(fsVox2RAS))
+        transform = np.dot(aff, np.linalg.inv(fsVox2RAS))
         points = []
         for device in input_list:
             indiv_file = os.path.join(self.elecs_dir,'individual_elecs', device + '.mat')
             elecmatrix = scipy.io.loadmat(indiv_file)['elecmatrix']
-            elecmatrix = np.hstack(elecmatrix,np.ones((elecmatrix.shape[0],1)))
+            elecmatrix = np.hstack((elecmatrix,np.ones((elecmatrix.shape[0],1))))
             elecmatrix = np.dot(transform,elecmatrix.T).T[:,:3]
             num_elecs = elecmatrix.shape[0]
             for el in range(num_elecs):

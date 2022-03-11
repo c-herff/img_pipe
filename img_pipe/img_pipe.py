@@ -1133,15 +1133,35 @@ class freeCoG:
         label_outfile = os.path.join(self.elecs_dir, '%s.mat'%(outfile))
         scipy.io.savemat(label_outfile,{'eleclabels':eleclabels,'elecmatrix':elecmatrix_all})
 
-    def make_allfsControlPoints():
-        individual_Elec_path = os.path.join(self.elecs_dir,'individual_elecs')
-        matfiles = [f for f in os.listdir(mypath) if os.isfile(join(individual_Elec_path, f) and f[:-3]=='mat')]
+    def make_allfsControlPoints(self, seperate_files=True):
+        '''Parses the /elecs_individual folder and creates a json for all devices that do not contain an "_"
+        .json file coordinates of elecs in RAS space. Output can be displayed in freeview.       
+        
+        Parameters
+        ----------
+        seperate_files: Create a json per device if true, otherwise one file with all devices. [Default True]
+
+        Usage
+        -----
+        >>> patient.make_allfsControlPoints(seperate_files=True)
+        
+        '''
+        individual_elec_path = os.path.join(self.elecs_dir,'individual_elecs')
+        matfiles = [f for f in os.listdir(individual_elec_path) if os.path.isfile(os.path.join(individual_elec_path, f)) and f[-3:]=='mat']
+        input_list = []
         for file in matfiles:
-            pass
-    
+            if '_' not in file:
+                if seperate_files:
+                    self.make_fsControlPoints(input_list=[file[:-4]],outfile=file[:-4]+'.json')
+                else:
+                    input_list.append(file[:-4])
+        if not seperate_files and len(input_list)>0:
+            self.make_fsControlPoints(input_list=input_list,outfile='elecs_fsControlPoints.json')
+        
+
     def make_fsControlPoints(self, input_list=None, outfile='elecs_fsControlPoints.json'):
-        '''Creates a .json file with the montage and coordinates of 
-        elecs files in the /elecs_individual folder.        
+        '''Creates a .json file with the coordinates in RAS of selected
+        elecs files in the /elecs_individual folder. Output can be displayed in freeview.   
         
         Parameters
         ----------

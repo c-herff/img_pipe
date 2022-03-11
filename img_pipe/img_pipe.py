@@ -416,10 +416,14 @@ class freeCoG:
             os.mkdir(self.mesh_dir)
 
         # Loop through hemispheres for this mesh, create one .mat file for each
+        tris = []
+        verts = []
         for h in hems:
             print("Making %s mesh"%(h))
             mesh_surf = os.path.join(self.surf_dir, h+'.'+mesh_name)
             vert, tri = nib.freesurfer.read_geometry(mesh_surf)
+            verts.append(vert.copy())
+            tris.append(tri.copy())
             out_file = os.path.join(self.mesh_dir, '%s_%s_trivert.mat'%(h, mesh_name))
             out_file_struct = os.path.join(self.mesh_dir, '%s_%s_%s.mat'%(self.subj, h, mesh_name))
             scipy.io.savemat(out_file, {'tri': tri, 'vert': vert})
@@ -427,6 +431,10 @@ class freeCoG:
             cortex = {'tri': tri+1, 'vert': vert}
             scipy.io.savemat(out_file_struct, {'cortex': cortex})
 
+        combinedVert = np.concatenate(verts)
+        combinedTri = np.concatenate([tris[0],tris[1]+verts[0].shape[0]])
+        combined_file = os.path.join(self.mesh_dir, '%s_trivert.mat'%(mesh_name))
+        scipy.io.savemat(combined_file, {'tri': combinedTri, 'vert': combinedVert})
         if mesh_name=='pial':
             self.pial_surf_file = dict()
             self.pial_surf_file['lh'] = os.path.join(self.subj_dir, self.subj, 'Meshes', 'lh_pial_trivert.mat')

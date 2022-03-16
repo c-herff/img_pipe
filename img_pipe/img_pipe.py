@@ -1520,7 +1520,7 @@ class freeCoG:
                                                                                 'eleclabels': elecmontage})
 
         return elec_labels
-        
+
     def label_elecs_hip(self, elecfile_prefix='elecs_all', atlas_surf='desikan-killiany', atlas_depth='destrieux', elecs_all=True):
         ''' Automatically labels electrodes similarly to label_elecs program.
         For electrodes in the hippocampus, it uses the annotation files created by Freesurfer's hippocampal segmentation program.
@@ -1648,6 +1648,7 @@ class freeCoG:
             else:
                 elec_labels_notdepth.append('Unknown')
 
+        import numpy.matlib
         if elecfile_prefix == 'TDT_elecs_all' or elecfile_prefix == 'clinical_elecs_all' or elecs_all:
             elec_labels[isnotdepth,3:7] = np.matlib.repmat(elec_labels_notdepth,1,4).T
             elec_labels[np.invert(isnotdepth),3:7] = '' # Set these to an empty string instead of None type

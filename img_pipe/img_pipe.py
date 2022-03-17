@@ -434,7 +434,7 @@ class freeCoG:
         combinedVert = np.concatenate(verts)
         combinedTri = np.concatenate([tris[0],tris[1]+verts[0].shape[0]])
         combined_file = os.path.join(self.mesh_dir, '%s_trivert.mat'%(mesh_name))
-        scipy.io.savemat(combined_file, {'tri': combinedTri, 'vert': combinedVert})
+        scipy.io.savemat(combined_file, {'tri': combinedTri, 'vert': combinedVert}) 
         if mesh_name=='pial':
             self.pial_surf_file = dict()
             self.pial_surf_file['lh'] = os.path.join(self.subj_dir, self.subj, 'Meshes', 'lh_pial_trivert.mat')

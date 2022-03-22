@@ -1141,6 +1141,44 @@ class freeCoG:
         label_outfile = os.path.join(self.elecs_dir, '%s.mat'%(outfile))
         scipy.io.savemat(label_outfile,{'eleclabels':eleclabels,'elecmatrix':elecmatrix_all})
 
+    def fsControlPoints2IndElecs(self, json_file=None):
+        '''Parses a fs control point json file and creates corresponding .mat files in the individual electrode folder.
+         Converts freesurfer RAS to surface RAS space.    
+        
+        Parameters
+        ----------
+        json_file: File with control points from freeview
+
+        Usage
+        -----
+        >>> patient.fsControlPoints2IndElecs(json_file='marked_elecs.json')
+        '''
+
+        fsVox2RAS = np.array([[-1., 0., 0., 128.], [0., 0., 1., -128.], [0., -1., 0., 128.], [0., 0., 0., 1.]])
+        orig_file = os.path.join(self.subj_dir, self.subj, 'mri', 'orig.mgz')
+        orig = nib.load(orig_file)
+        aff = orig.affine
+        transform = np.dot(fsVox2RAS, np.linalg.inv(aff))
+        with open(json_file) as f:
+            jsonData = json.load(f)
+        devices={}
+        for point in jsonData['points']:
+            if 'statistics' not in point.keys():
+                continue
+            name = list(point['statistics'].keys())[0]
+            if name[:-1] not in devices:
+                devices[name[:-1]]=np.zeros((2,3))
+            coords = [point['coordinates']['x'],point['coordinates']['y'],point['coordinates']['z'],1]
+            coords = np.dot(transform,coords)[:3]
+            devices[name[:-1]][int(name[-1])-1]=coords
+        for device in devices.keys():
+            elecfile = os.path.join(os.path.join(self.elecs_dir, 'individual_elecs', device +'_ends.mat'))
+            scipy.io.savemat(elecfile, {'elecmatrix': devices[device]})
+
+
+
+
+    
     def make_allfsControlPoints(self, seperate_files=True):
         '''Parses the /elecs_individual folder and creates a json for all devices that do not contain an "_"
         .json file coordinates of elecs in RAS space. Output can be displayed in freeview.       

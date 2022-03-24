@@ -1482,7 +1482,7 @@ class freeCoG:
             if atlas_depth == 'desikan-killiany':
                 depth_atlas_nm = 'aparc+aseg'
             elif atlas_depth == 'destrieux':
-                depth_atlas_nm = 'aparc.2009s+aseg'
+                depth_atlas_nm = 'aparc.a2009s+aseg'
             elif atlas_depth == 'wm':
                 depth_atlas_nm = 'wmparc'
             else:

@@ -18,6 +18,7 @@ import shutil
 import argparse
 import inspect
 import json
+import sys
 
 from sklearn.metrics import euclidean_distances
 
@@ -155,7 +156,7 @@ class freeCoG:
 
         if not recon_scan in ['None', 'T2', 'FLAIR']:
         	raise NameError('Invalid secondary recon-all scan for freeCoG')
-        
+            
         self.subj = subj
         self.subj_dir = subj_dir
         self.patient_dir = os.path.join(self.subj_dir, self.subj)
@@ -1193,9 +1194,6 @@ class freeCoG:
             elecfile = os.path.join(os.path.join(self.elecs_dir, 'individual_elecs', device +'_ends.mat'))
             scipy.io.savemat(elecfile, {'elecmatrix': devices[device]})
 
-
-
-
     
     def make_allfsControlPoints(self, seperate_files=True):
         '''Parses the /elecs_individual folder and creates a json for all devices that do not contain an "_"
@@ -1826,6 +1824,80 @@ class freeCoG:
                                                                                 'anatomy': elec_labels_orig})
 
         return elec_labels
+
+
+    def label_elecs_PTD(self, elecfile_prefix='elecs_all', output_nm='elecs_all_PTD'):
+        ''' Automatically calculates the PTD value of electrodes based on the freesurfer annotation file.
+        Assumes elecs_all.mat file in the /elecs folder with channel and anatomy labels. 
+        Uses only the Destrieux Atlas, as described here: https://surfer.nmr.mgh.harvard.edu/fswiki/CorticalParcellation.
+        PTD means Proximal Tissue Density, as described in Mercier et al. (2017): 10.1016/j.neuroimage.2016.08.037. 
+        
+        Parameters
+        ----------
+        elecfile_prefix : str, optional
+            Prefix of the .mat file with the electrode coordinates matrix
+        output_nm : str
+            Name of the output file (.mat with elecmatrix + anatomy + name + PTD)
+        
+        Returns
+        -------
+        elec_labels : array
+            Array (1D) of PTD value for each electrode (NaN means neither gray nor white matter in the vicinity)
+        '''
+        #Load data
+        asegfile = os.path.join(self.subj_dir, self.subj, 'mri', 'aparc.a2009s+aseg.mgz')
+        atlas = nib.freesurfer.load(asegfile)
+        data = atlas.get_fdata()
+        elecfile = os.path.join(self.elecs_dir, elecfile_prefix+'.mat')
+        elecs_all = scipy.io.loadmat(elecfile)
+        elecs = elecs_all['elecmatrix']
+
+        #Apply affine transformation on elecs from RAS to voxel space
+        affine = np.array([ [  -1.,    0.,    0.,  128.],
+                            [   0.,    0.,    1., -128.],
+                            [   0.,   -1.,    0.,  128.],
+                            [   0.,    0.,    0.,    1.]])
+        intercept = np.ones(len(elecs))
+        elecs_ones = np.column_stack((elecs,intercept))
+        VoxCRS = np.dot(np.linalg.inv(affine), elecs_ones.transpose()).transpose().astype(int)
+
+        #Create new atlas from Destrieux atlas
+        #using most fitting standard FreeSurferColorLUT labels
+        PTD_atlas = np.zeros(data.shape)
+        for x in range(len(data[0])):
+            for y in range(len(data[1])):
+                for z in range(len(data[2])):
+                    val = int(data[x,y,z])
+                    #gray matter + subcortical --> 702
+                    if (val in [8,10,11,12,13,17,18,26,28,47,49,50,51,52,53,54,58,60]) or (val > 10000):
+                        PTD_atlas[x,y,z] = 702            
+                    #white matter --> 703
+                    elif val in [2,7,41,46,77,85,251,252,253,254,255]:
+                        PTD_atlas[x,y,z] = 703
+                    #background and other (i.e., ventricles) --> 0
+                    else:
+                        PTD_atlas[x,y,z] = 0
+        #save atlas for later use
+        print('Saving PTD atlas as PTD_atlas.mgz')                
+        nib.save(nib.freesurfer.mghformat.MGHImage(PTD_atlas.astype(np.float32), atlas.affine), os.path.join(self.subj_dir, self.subj, 'mri', 'PTD_atlas.mgz'))
+
+        #Calculate proximal tissue density for all elecs
+        PTD = np.empty((len(elecs)))
+        for elec in np.arange(len(elecs)):
+            cube = PTD_atlas[VoxCRS[elec,0]-1:VoxCRS[elec,0]+2,VoxCRS[elec,1]-1:VoxCRS[elec,1]+2,VoxCRS[elec,2]-1:VoxCRS[elec,2]+2]
+            gm = np.sum(cube == 702)
+            wm = np.sum(cube == 703)
+            with np.errstate(divide='ignore', invalid='ignore'):
+                PTD[elec] = (gm-wm)/(gm+wm)
+
+        #Save PTD values to specified output name
+        print('Saving electrode PTD labels to %s'%(output_nm))
+        scipy.io.savemat(os.path.join(self.elecs_dir, output_nm + '.mat'), {'elecmatrix': elecs,
+                                                                                'anatomy': elecs_all['anatomy'],
+                                                                                'eleclabels': elecs_all['eleclabels'],
+                                                                                'PTD': PTD})
+        return PTD                                                                        
+
 
     def warp_all(self, elecfile_prefix='TDT_elecs_all', warp_depths=True, warp_surface=True, template='cvs_avg35_inMNI152'):
         ''' Warps surface and depth electrodes and runs quality checking functions for them. 
